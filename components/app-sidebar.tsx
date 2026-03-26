@@ -12,6 +12,7 @@ import {
   Shield,
   Users,
   Bell,
+  HeadphonesIcon,
 } from "lucide-react"
 
 interface AppSidebarProps {
@@ -105,28 +106,35 @@ export function AppSidebar({ currentView, onNavigate, notificationCount = 3 }: A
 
         {/* Section Administration */}
         <p className="text-xs text-sidebar-foreground/40 font-medium px-3 py-2 mt-4">Administration</p>
-        
-        <div>
-          <button
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-              currentView === "admin"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-            }`}
-            onClick={() => {
-              setAdminExpanded(!adminExpanded)
-              onNavigate("admin")
-            }}
-          >
-            <Shield className="w-4 h-4" />
-            <span className="flex-1 text-left">Gestion</span>
-            {notificationCount > 0 && (
-              <Badge className="bg-destructive text-white text-xs h-5 min-w-5 flex items-center justify-center">
-                {notificationCount}
-              </Badge>
-            )}
-          </button>
-        </div>
+
+        <button
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+            currentView === "admin"
+              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          }`}
+          onClick={() => onNavigate("admin")}
+        >
+          <Shield className="w-4 h-4" />
+          <span className="flex-1 text-left">Gestion</span>
+          {notificationCount > 0 && (
+            <Badge className="bg-destructive text-white text-xs h-5 min-w-5 flex items-center justify-center">
+              {notificationCount}
+            </Badge>
+          )}
+        </button>
+
+        <button
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+            currentView === "support"
+              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          }`}
+          onClick={() => onNavigate("support")}
+        >
+          <HeadphonesIcon className="w-4 h-4" />
+          <span className="flex-1 text-left">Support</span>
+        </button>
       </nav>
 
       </div>

@@ -156,107 +156,89 @@ export function AdminView() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="requests" className="mt-6">
+        <TabsContent value="requests" className="mt-4">
           {requests.length === 0 ? (
-            <Card className="border border-border">
-              <CardContent className="p-8 text-center">
-                <Check className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                <p className="text-muted-foreground">Aucune demande en attente</p>
-              </CardContent>
-            </Card>
+            <div className="py-12 text-center text-muted-foreground">
+              <Check className="w-8 h-8 mx-auto text-green-500 mb-3" />
+              <p className="text-sm">Aucune demande en attente</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {requests.map((request) => (
-                <Card 
-                  key={request.id} 
-                  className="border border-border hover:border-primary/30 transition-colors cursor-pointer group"
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer group"
                   onClick={() => handleRequestClick(request)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={request.employee.avatar} />
-                          <AvatarFallback className="bg-muted text-muted-foreground text-sm">
-                            {request.employee.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{request.employee.name}</span>
-                            {request.priority === "urgent" && (
-                              <Badge className="bg-red-100 text-red-700 hover:bg-red-100 text-xs">Urgent</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{request.details}</p>
-                        </div>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={request.employee.avatar} />
+                      <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                        {request.employee.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground">{request.employee.name}</span>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-foreground">{request.date}</p>
-                          <p className="text-xs text-muted-foreground">{request.duration}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="icon" 
-                            variant="outline" 
-                            className="h-8 w-8 hover:bg-green-50 hover:text-green-600 hover:border-green-300"
-                            onClick={(e) => { e.stopPropagation(); handleApprove(request.id) }}
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            size="icon" 
-                            variant="outline" 
-                            className="h-8 w-8 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
-                            onClick={(e) => { e.stopPropagation(); handleReject(request.id) }}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                      </div>
+                      <p className="text-xs text-muted-foreground">{request.details} · {request.date}</p>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">{request.duration}</span>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7 hover:bg-green-50 hover:text-green-600 hover:border-green-300"
+                        onClick={(e) => { e.stopPropagation(); handleApprove(request.id) }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                        onClick={(e) => { e.stopPropagation(); handleReject(request.id) }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="notifications" className="mt-6">
-          <div className="space-y-3">
+        <TabsContent value="notifications" className="mt-4">
+          <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
             {notifs.map((notif) => (
-              <Card 
-                key={notif.id} 
-                className={`border transition-colors cursor-pointer ${
-                  notif.read ? 'border-border bg-background' : 'border-primary/30 bg-primary/5'
+              <div
+                key={notif.id}
+                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                  notif.read ? 'hover:bg-muted/30' : 'bg-primary/5 hover:bg-primary/10'
                 }`}
                 onClick={() => markAsRead(notif.id)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className={`p-2 rounded-full ${
-                      notif.type === 'warning' ? 'bg-yellow-100' :
-                      notif.type === 'error' ? 'bg-red-100' : 'bg-blue-100'
-                    }`}>
-                      {notif.type === 'warning' && <AlertTriangle className="w-4 h-4 text-yellow-600" />}
-                      {notif.type === 'error' && <AlertTriangle className="w-4 h-4 text-red-600" />}
-                      {notif.type === 'info' && <Bell className="w-4 h-4 text-blue-600" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-foreground">
-                        <span className="font-medium">{notif.employee}</span>{" "}
-                        {notif.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">{notif.date}</p>
-                    </div>
-                    {!notif.read && (
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                <div className={`p-1.5 rounded-full flex-shrink-0 ${
+                  notif.type === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900/40' :
+                  notif.type === 'error'   ? 'bg-red-100 dark:bg-red-900/40' :
+                                             'bg-blue-100 dark:bg-blue-900/40'
+                }`}>
+                  {notif.type === 'warning' && <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />}
+                  {notif.type === 'error'   && <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />}
+                  {notif.type === 'info'    && <Bell className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground truncate">
+                    <span className="font-medium">{notif.employee}</span>{" "}{notif.message}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{notif.date}</p>
+                </div>
+                {!notif.read && <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+              </div>
             ))}
           </div>
         </TabsContent>
@@ -325,9 +307,6 @@ export function AdminView() {
                 >
                   {selectedRequest?.details}
                 </Badge>
-                {selectedRequest?.priority === "urgent" && (
-                  <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Urgent</Badge>
-                )}
               </div>
             </div>
 

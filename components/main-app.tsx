@@ -9,6 +9,7 @@ import { TimesheetView } from "./timesheet-view"
 import { AbsencesView } from "./absences-view"
 import { ProjectsView } from "./projects-view"
 import { AdminView } from "./admin-view"
+import { SupportView } from "./support-view"
 import { AppSidebar } from "./app-sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -30,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CalendarDays, Share2, MoreHorizontal, Sun, Moon, Download, FileSpreadsheet, PanelLeftClose, PanelLeft, LogOut } from "lucide-react"
+import { CalendarDays, Sun, Moon, PanelLeftClose, PanelLeft, LogOut } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfQuarter, endOfQuarter } from "date-fns"
 import { fr } from "date-fns/locale"
 
@@ -110,8 +111,10 @@ export function MainApp() {
   }
 
   const handleNavigate = (view: string) => {
-    setCurrentView(view as "dashboard" | "pointage" | "absence" | "admin")
+    setCurrentView(view as "dashboard" | "pointage" | "absence" | "admin" | "support")
     setSelectedWeekId(undefined)
+    setOpenTimesheetPanel(false)
+    setOpenAbsencePanel(false)
   }
 
   const handleDashboardNavigate = (view: string, openPanel?: boolean) => {
@@ -155,6 +158,8 @@ export function MainApp() {
       setCurrentView("pointage")
     } else if (item === "Admin") {
       setCurrentView("admin")
+    } else if (item === "Support") {
+      setCurrentView("support")
     }
   }
 
@@ -168,6 +173,8 @@ export function MainApp() {
         return [{ label: "Home", clickable: true }, { label: "Timesheet", clickable: true }, { label: "Absence", clickable: false }]
       case "admin":
         return [{ label: "Home", clickable: true }, { label: "Admin", clickable: true }, { label: "Gestion", clickable: false }]
+      case "support":
+        return [{ label: "Home", clickable: true }, { label: "Admin", clickable: true }, { label: "Support", clickable: false }]
       default:
         return [{ label: "Home", clickable: false }]
     }
@@ -185,6 +192,8 @@ export function MainApp() {
         return <AbsencesView openPanelOnMount={openAbsencePanel} onPanelClose={() => setOpenAbsencePanel(false)} />
       case "admin":
         return <AdminView />
+      case "support":
+        return <SupportView />
       default:
         return <Dashboard onNavigate={handleDashboardNavigate} />
     }
@@ -350,36 +359,6 @@ export function MainApp() {
             </DropdownMenu>
           </div>
         </header>
-
-        {/* Secondary Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-background">
-          <div />
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2 h-9">
-              <Share2 className="w-4 h-4" />
-              Partager
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportCSV}>
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Export CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export PDF
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Parametres</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6">

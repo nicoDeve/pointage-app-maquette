@@ -43,9 +43,9 @@ interface TimesheetContextType {
   projects: Project[]
   weeks: WeekData[]
   absences: Absence[]
-  currentView: "dashboard" | "pointage" | "absence" | "admin"
+  currentView: "dashboard" | "pointage" | "absence" | "admin" | "support"
   pointageView: "liste" | "calendrier"
-  setCurrentView: (view: "dashboard" | "pointage" | "absence" | "admin") => void
+  setCurrentView: (view: "dashboard" | "pointage" | "absence" | "admin" | "support") => void
   setPointageView: (view: "liste" | "calendrier") => void
   addTimeEntry: (weekId: string, entry: Omit<TimeEntry, "id">) => void
   updateTimeEntry: (weekId: string, entryId: string, hours: number) => void
@@ -224,7 +224,7 @@ export function TimesheetProvider({ children }: { children: ReactNode }) {
   const [projects] = useState<Project[]>(initialProjects)
   const [weeks, setWeeks] = useState<WeekData[]>(initialWeeks)
   const [absences, setAbsences] = useState<Absence[]>(initialAbsences)
-  const [currentView, setCurrentView] = useState<"dashboard" | "pointage" | "absence" | "admin">("dashboard")
+  const [currentView, setCurrentView] = useState<"dashboard" | "pointage" | "absence" | "admin" | "support">("dashboard")
   const [pointageView, setPointageView] = useState<"liste" | "calendrier">("liste")
 
   const addTimeEntry = (weekId: string, entry: Omit<TimeEntry, "id">) => {
