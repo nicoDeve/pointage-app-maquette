@@ -364,7 +364,7 @@ export function MainApp() {
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto px-4 py-4">
           {renderView()}
         </div>
       </main>
