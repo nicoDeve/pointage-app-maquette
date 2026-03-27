@@ -22,8 +22,10 @@ import {
   X,
   History,
   Plus,
+  ArrowLeft,
 } from "lucide-react"
 import { TimesheetCalendar } from "./timesheet-calendar"
+import { WeekSelectorPopover } from "./week-selector-popover"
 import { InfoCardPopover } from "@/components/info-card-popover"
 import type { DayOfWeek } from "@/contexts/timesheet-context"
 
@@ -175,10 +177,9 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
     setSelectedWeek(week)
   }
 
-  // Retour à la liste des semaines
   const handleBackToWeeks = () => {
     setSelectedWeek(null)
-    if (onPanelClose) onPanelClose()
+    onPanelClose?.()
   }
 
   // Clic sur un jour → ouvre le panel
@@ -315,7 +316,7 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
                   <Filter className="w-4 h-4" />
                   Filtres
                   {hasActiveFilters && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    <Badge variant="secondary" className="ml-1 size-5 shrink-0 rounded-full p-0 flex items-center justify-center text-xs tabular-nums">
                       {activeFilterCount}
                     </Badge>
                   )}
@@ -460,31 +461,45 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
           {selectedWeek ? (
             <div className="border border-border rounded-lg overflow-hidden">
               {/* Header de la semaine */}
-              <div className={`flex items-center justify-between px-4 py-3 border-b border-border ${selectedWeek.isCurrent ? "bg-blue-50 dark:bg-blue-950/30" : "bg-muted/40"}`}>
-                <div className="flex items-center gap-3">
-                  <button
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
                     onClick={handleBackToWeeks}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Retour à la liste des semaines"
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <Separator orientation="vertical" className="h-4" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">Semaine {selectedWeek.weekNumber}</span>
-                      {selectedWeek.isCurrent && (
-                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 hover:bg-amber-100 text-xs font-normal">
-                          En cours
-                        </Badge>
-                      )}
-                      {isPastWeek(selectedWeek.weekNumber) && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="min-w-0 w-[min(100%,18rem)] sm:w-auto sm:max-w-md">
+                    <WeekSelectorPopover
+                      weeks={weeks}
+                      selectedWeek={selectedWeek}
+                      currentWeekNumber={currentWeekNumber}
+                      onSelect={setSelectedWeek}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {selectedWeek.isCurrent && (
+                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 hover:bg-amber-100 text-xs font-normal border-0">
+                        En cours
+                      </Badge>
+                    )}
+                    {isPastWeek(selectedWeek.weekNumber) && !selectedWeek.isCurrent && (
+                      <Badge variant="outline" className="text-xs font-normal text-muted-foreground border-border">
+                        <span className="flex items-center gap-1">
                           <History className="w-3 h-3" />
-                          <span>Passée</span>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{selectedWeek.startDate} – {selectedWeek.endDate}</p>
+                          Semaine passée
+                        </span>
+                      </Badge>
+                    )}
+                    {!isPastWeek(selectedWeek.weekNumber) && !selectedWeek.isCurrent && (
+                      <Badge variant="outline" className="text-xs font-normal border-sky-400/50 text-sky-800 dark:text-sky-300">
+                        À venir
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 {/* Progress semaine */}

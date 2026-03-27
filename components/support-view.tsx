@@ -437,7 +437,7 @@ export function SupportView() {
                   <Filter className="w-4 h-4" />
                   Filtres
                   {hasActiveFilter && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    <Badge variant="secondary" className="ml-1 size-5 shrink-0 rounded-full p-0 flex items-center justify-center text-xs tabular-nums">
                       {activeFilterCount}
                     </Badge>
                   )}

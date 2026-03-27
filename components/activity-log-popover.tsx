@@ -119,7 +119,7 @@ export function ActivityLogPopover() {
         >
           <Bell className="h-4 w-4 text-muted-foreground" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background bg-primary px-1 text-[10px] font-semibold tabular-nums leading-none text-primary-foreground">
               {unread > 9 ? "9+" : unread}
             </span>
           )}

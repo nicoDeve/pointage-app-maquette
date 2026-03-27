@@ -202,7 +202,9 @@ export function AdminView() {
           <TabsTrigger value="requests" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
             Demandes en attente
             {requests.length > 0 && (
-              <Badge className="ml-2 bg-primary text-primary-foreground text-xs">{requests.length}</Badge>
+              <Badge className="ml-2 bg-primary text-primary-foreground text-xs h-5 min-w-5 shrink-0 rounded-full px-1.5 p-0 flex items-center justify-center tabular-nums">
+                {requests.length}
+              </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="notifications" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -230,7 +232,9 @@ export function AdminView() {
                   <div key={pole}>
                     <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
                       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{pole}</span>
-                      <Badge variant="outline" className="text-xs font-normal h-4 px-1.5">{reqs.length}</Badge>
+                      <Badge variant="outline" className="text-xs font-normal h-5 min-w-5 shrink-0 rounded-full px-1.5 p-0 flex items-center justify-center tabular-nums">
+                        {reqs.length}
+                      </Badge>
                     </div>
                     {reqs.map((request) => (
                       <div

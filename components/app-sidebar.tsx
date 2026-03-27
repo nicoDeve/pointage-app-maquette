@@ -118,7 +118,7 @@ export function AppSidebar({ currentView, onNavigate, notificationCount = 3 }: A
           <Shield className="w-4 h-4" />
           <span className="flex-1 text-left">Gestion</span>
           {notificationCount > 0 && (
-            <Badge className="bg-destructive text-white text-xs h-5 min-w-5 flex items-center justify-center">
+            <Badge className="bg-destructive text-white text-xs h-5 min-w-5 shrink-0 rounded-full px-1.5 p-0 flex items-center justify-center tabular-nums">
               {notificationCount}
             </Badge>
           )}

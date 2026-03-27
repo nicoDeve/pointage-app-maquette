@@ -127,7 +127,7 @@ export function AbsencesView({ openDetail = false, absenceType: initialType, ope
           onClick: () => handleOpenDetail(),
         }}
       >
-        <Card className="border border-border cursor-pointer transition-all hover:shadow-md hover:border-primary/30 group">
+        <Card className="border border-border cursor-default hover:shadow-md transition-shadow group">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-foreground">Mes compteurs</span>
