@@ -11,7 +11,18 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar, List, ChevronRight, ChevronLeft, Trash2, Search, Filter, X, History, Plus } from "lucide-react"
+import {
+  Calendar,
+  List,
+  ChevronRight,
+  ChevronLeft,
+  Trash2,
+  Search,
+  Filter,
+  X,
+  History,
+  Plus,
+} from "lucide-react"
 import { TimesheetCalendar } from "./timesheet-calendar"
 import { InfoCardPopover } from "@/components/info-card-popover"
 import type { DayOfWeek } from "@/contexts/timesheet-context"

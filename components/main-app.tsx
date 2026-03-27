@@ -10,6 +10,7 @@ import { AbsencesView } from "./absences-view"
 import { ProjectsView } from "./projects-view"
 import { AdminView } from "./admin-view"
 import { SupportView } from "./support-view"
+import { ActivityLogPopover } from "./activity-log-popover"
 import { AppSidebar } from "./app-sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -317,7 +318,9 @@ export function MainApp() {
                 )}
               </PopoverContent>
             </Popover>
-            
+
+            <ActivityLogPopover />
+
             {/* Dark Mode Toggle */}
             <Button 
               variant="outline" 
