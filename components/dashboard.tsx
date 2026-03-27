@@ -102,7 +102,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-foreground">{pendingAbsences}</span>
               </div>
-              <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-100 font-normal text-xs">
+              <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-100 dark:bg-pink-900/40 dark:text-pink-300 font-normal text-xs">
                 1 approuvee
               </Badge>
               <p className="text-xs text-muted-foreground">En attente de validation</p>
@@ -159,8 +159,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     <Badge 
                       className={`text-xs font-normal ${
                         week.status === "complet" 
-                          ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-300" 
-                          : "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900 dark:text-red-300"
+                          ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300" 
+                          : "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300"
                       }`}
                     >
                       {week.status}
@@ -191,7 +191,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         <p className="font-medium text-foreground">{absence.typeLabel}</p>
                         <p className="text-xs text-muted-foreground">{absence.startDate} - {absence.endDate}</p>
                       </div>
-                      <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 font-normal text-xs">
+                      <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/40 dark:text-yellow-300 font-normal text-xs">
                         en attente
                       </Badge>
                     </div>

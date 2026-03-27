@@ -80,7 +80,7 @@ interface BaseInfoCardProps {
   align?: "start" | "center" | "end"
   /** Largeur Tailwind de la card, ex: "w-72", "w-80" (défaut: "w-72") */
   width?: string
-  /** Classes CSS appliquées au div wrapper du trigger (défaut: "h-full") */
+  /** Classes CSS appliquées au div wrapper du trigger (défaut: "") */
   triggerClassName?: string
   /**
    * Mode d'ouverture :
@@ -267,7 +267,7 @@ export function InfoCardPopover(props: InfoCardPopoverProps) {
     align = "start",
     width = "w-72",
     trigger = "hover",
-    triggerClassName = "h-full",
+    triggerClassName = "",
   } = props
 
   const isEmpty =

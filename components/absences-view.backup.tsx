@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { InfoCardPopover } from "@/components/info-card-popover"
-import { Palmtree, CalendarIcon, ChevronDown, Info, Plus } from "lucide-react"
+import { Palmtree, CalendarIcon, ChevronDown, Info, CalendarDays, Clock, Plus } from "lucide-react"
 import { format, differenceInBusinessDays } from "date-fns"
 import { fr } from "date-fns/locale"
 
@@ -42,16 +42,10 @@ export function AbsencesView({ openDetail = false, absenceType: initialType, ope
   const absencesHours = absencesCount * 7
 
   const absenceTypes = [
-    { value: "conges_payes", label: "Congés payés",  color: "#8b5cf6" },
-    { value: "teletravail",  label: "Télétravail",   color: "#0ea5e9" },
-    { value: "maladie",      label: "Maladie",        color: "#ef4444" },
-    { value: "sans_solde",   label: "Sans solde",     color: "#6b7280" },
+    { value: "conges_payes", label: "Conges payes", color: "#8b5cf6" },
+    { value: "maladie", label: "Maladie", color: "#ef4444" },
+    { value: "sans_solde", label: "Sans solde", color: "#6b7280" },
   ]
-
-  // Soldes TT (mock : 10j disponibles)
-  const ttBalance      = 10
-  const ttUsed         = absences.filter(a => a.type === "teletravail").reduce((s, a) => s + a.duration, 0)
-  const ttRemaining    = ttBalance - ttUsed
 
   const calculateDuration = () => {
     if (!startDate || !endDate) return 0
@@ -92,76 +86,103 @@ export function AbsencesView({ openDetail = false, absenceType: initialType, ope
   const getStatusBadge = (status: Absence["status"]) => {
     switch (status) {
       case "approuvee":
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300 text-xs font-normal">approuvee</Badge>
+        return <Badge className="bg-green-500 text-white hover:bg-green-500 text-xs font-normal">approuvee</Badge>
       case "refusee":
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300 text-xs font-normal">refusee</Badge>
+        return <Badge className="bg-red-500 text-white hover:bg-red-500 text-xs font-normal">refusee</Badge>
       default:
-        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/40 dark:text-yellow-300 text-xs font-normal">En attente</Badge>
+        return <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400 text-xs font-normal">En attente</Badge>
     }
   }
 
   const filteredAbsences = filter === "all" ? absences : absences.filter(a => a.status === filter)
 
   return (
-    <div className="space-y-4">
-      {/* Grosse card unifiée avec hover détail */}
-      <InfoCardPopover
-        variant="stats"
-        trigger="hover"
-        title="Mes compteurs"
-        subtitle="Soldes & absences 2026"
-        theme="blue"
-        side="bottom"
-        align="start"
-        width="w-80"
-        stats={[
-          { label: "Congés payés restants",  value: `${congesPayesRemaining}j / ${congesBalance.total}j` },
-          { label: "Équivalent heures CP",    value: `${congesPayesRemainingHours}h`, subtle: true },
-          { label: "Télétravail restant",     value: `${ttRemaining}j / ${ttBalance}j` },
-          { label: "Absences & maladie",      value: `${absencesCount}j utilisés` },
-          { label: "Base calcul",             value: "7h / jour", subtle: true },
-        ]}
-        action={{
-          label: "Nouvelle demande",
-          icon: <Plus className="w-4 h-4" />,
-          onClick: () => handleOpenDetail(),
-        }}
-      >
-        <Card className="border border-border cursor-pointer transition-all hover:shadow-md hover:border-primary/30 group">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-foreground">Mes compteurs</span>
-              <Palmtree className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+    <div className="space-y-6">
+      {/* Solde de conges - utilises sur total */}
+      <Card className="border border-border">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Solde de conges</span>
+            <Palmtree className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-bold text-foreground">{congesPayesUsed}</span>
+              <span className="text-sm text-muted-foreground">/{congesBalance.total}J utilises</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">CP restants</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-foreground">{congesPayesRemaining}</span>
-                  <span className="text-xs text-muted-foreground">j</span>
-                </div>
-                <Progress value={(congesPayesUsed / congesBalance.total) * 100} className="h-1 mt-1.5 bg-muted [&>div]:bg-violet-500" />
+            <Progress value={(congesPayesUsed / congesBalance.total) * 100} className="h-1.5 bg-muted [&>div]:bg-blue-500" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Cards - Jours restants avec info card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <InfoCardPopover
+          variant="stats"
+          trigger="hover"
+          title="Conges payes"
+          subtitle="Solde disponible"
+          theme="blue"
+          side="bottom"
+          align="start"
+          stats={[
+            { label: "Jours restants",    value: `${congesPayesRemaining} jours` },
+            { label: "Equivalent heures", value: `${congesPayesRemainingHours}h`  },
+            { label: "Base calcul",       value: "7h / jour", subtle: true        },
+          ]}
+          action={{
+            label: "Demander des conges",
+            icon: <Plus className="w-4 h-4" />,
+            onClick: () => handleOpenDetail("conges_payes"),
+          }}
+        >
+          <Card className="border border-border cursor-pointer transition-all hover:shadow-md hover:border-primary/30 group">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Conges payes disponibles</span>
+                <CalendarDays className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">TT restants</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-foreground">{ttRemaining}</span>
-                  <span className="text-xs text-muted-foreground">j</span>
-                </div>
-                <Progress value={(ttUsed / ttBalance) * 100} className="h-1 mt-1.5 bg-muted [&>div]:bg-sky-500" />
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-foreground">{congesPayesRemaining}j</span>
+                <span className="text-xs text-muted-foreground">restants</span>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Absences</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-foreground">{absencesCount}</span>
-                  <span className="text-xs text-muted-foreground">j</span>
-                </div>
-                <Progress value={Math.min((absencesCount / 20) * 100, 100)} className="h-1 mt-1.5 bg-muted [&>div]:bg-orange-500" />
+            </CardContent>
+          </Card>
+        </InfoCardPopover>
+
+        <InfoCardPopover
+          variant="stats"
+          trigger="hover"
+          title="Absences & Times off"
+          subtitle="Historique"
+          theme="orange"
+          side="bottom"
+          align="start"
+          stats={[
+            { label: "Jours pris",        value: `${absencesCount} jours` },
+            { label: "Equivalent heures", value: `${absencesHours}h`      },
+            { label: "Inclut",            value: "Maladie, sans solde", subtle: true },
+          ]}
+          action={{
+            label: "Declarer une absence",
+            icon: <Plus className="w-4 h-4" />,
+            onClick: () => handleOpenDetail(),
+          }}
+        >
+          <Card className="border border-border cursor-pointer transition-all hover:shadow-md hover:border-primary/30 group">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Absences & Times off</span>
+                <Clock className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </InfoCardPopover>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-foreground">{absencesCount}j</span>
+                <span className="text-xs text-muted-foreground">pris</span>
+              </div>
+            </CardContent>
+          </Card>
+        </InfoCardPopover>
+      </div>
 
       {/* Mes demandes */}
       <div className="space-y-4">
@@ -188,41 +209,27 @@ export function AbsencesView({ openDetail = false, absenceType: initialType, ope
           </div>
         </div>
 
-        <div className="border border-border rounded-lg overflow-hidden">
-
-          <div className="divide-y divide-border">
-            {filteredAbsences.map((absence) => (
-              <div key={absence.id} className="grid grid-cols-[1fr_auto_100px] items-center px-4 py-3 hover:bg-muted/30 transition-colors">
-                {/* Infos */}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-[#18181b] text-white hover:bg-[#18181b] text-xs font-normal">
-                      {absence.typeLabel}
-                    </Badge>
+        <div className="space-y-3">
+          {filteredAbsences.map((absence) => (
+            <div key={absence.id} className="p-4 border-b border-border last:border-b-0">
+              <div className="space-y-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {absence.startDate} - {absence.endDate}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{absence.duration} jour{absence.duration > 1 ? "s" : ""}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {absence.startDate} → {absence.endDate}
-                  </p>
                 </div>
-
-                {/* Durée */}
-                <span className="text-sm text-foreground pr-6">
-                  {absence.duration} j
-                </span>
-
-                {/* Statut */}
-                <div className="flex justify-center">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-[#18181b] text-white hover:bg-[#18181b] text-xs font-normal">
+                    {absence.typeLabel}
+                  </Badge>
                   {getStatusBadge(absence.status)}
                 </div>
               </div>
-            ))}
-
-            {filteredAbsences.length === 0 && (
-              <div className="py-10 text-center text-sm text-muted-foreground">
-                Aucune demande
-              </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
 

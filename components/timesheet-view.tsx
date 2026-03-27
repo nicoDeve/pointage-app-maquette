@@ -11,9 +11,40 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar, List, ChevronRight, Trash2, Search, Filter, X, History } from "lucide-react"
+import { Calendar, List, ChevronRight, ChevronLeft, Trash2, Search, Filter, X, History, Plus } from "lucide-react"
 import { TimesheetCalendar } from "./timesheet-calendar"
 import { InfoCardPopover } from "@/components/info-card-popover"
+import type { DayOfWeek } from "@/contexts/timesheet-context"
+
+// ── Constantes jours ──────────────────────────────────────────────────────────
+const DAYS: DayOfWeek[] = ["lun", "mar", "mer", "jeu", "ven"]
+const DAY_LABELS: Record<DayOfWeek, string> = {
+  lun: "Lundi", mar: "Mardi", mer: "Mercredi", jeu: "Jeudi", ven: "Vendredi",
+}
+
+// ── Composant input heures +/- ────────────────────────────────────────────────
+function HoursInput({ value, onChange, max }: { value: number; onChange: (h: number) => void; max: number }) {
+  const snap = (v: number) => Math.round(v * 2) / 2
+  const dec  = () => onChange(Math.max(0, snap(value - 0.5)))
+  const inc  = () => onChange(Math.min(max, snap(value + 0.5)))
+  return (
+    <div className="flex items-center border border-border rounded-md overflow-hidden h-8 bg-background flex-shrink-0">
+      <button type="button" onClick={dec} disabled={value <= 0}
+        className="px-2 h-full text-sm text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors select-none">
+        −
+      </button>
+      <input
+        type="number" step={0.5} min={0} max={max} value={value}
+        onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) onChange(Math.min(max, Math.max(0, snap(v)))) }}
+        className="w-10 text-center text-xs bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <button type="button" onClick={inc} disabled={value >= max}
+        className="px-2 h-full text-sm text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors select-none">
+        +
+      </button>
+    </div>
+  )
+}
 
 interface TimesheetViewProps {
   initialWeekId?: string
@@ -24,20 +55,19 @@ interface TimesheetViewProps {
 
 export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, onPanelClose }: TimesheetViewProps) {
   const { weeks, projects, absences, pointageView, setPointageView, addTimeEntry, updateTimeEntry, removeTimeEntry } = useTimesheet()
+  // Navigation: semaine sélectionnée pour la vue jours
   const [selectedWeek, setSelectedWeek] = useState<WeekData | null>(null)
-  const [isDetailOpen, setIsDetailOpen] = useState(false)
-  
-  // Open panel on mount if requested
+  // Jour sélectionné pour le panel latéral
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null)
+  const [isDayPanelOpen, setIsDayPanelOpen] = useState(false)
+
+  // Pour openPanelOnMount : naviguer directement vers la vue jours de la semaine cible
   useEffect(() => {
     if (openPanelOnMount && initialWeekId) {
       const week = weeks.find(w => w.id === initialWeekId)
-      if (week) {
-        setSelectedWeek(week)
-        setIsDetailOpen(true)
-      }
+      if (week) setSelectedWeek(week)
     }
   }, [openPanelOnMount, initialWeekId, weeks])
-  const [newProjectId, setNewProjectId] = useState<string>("")
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   
   // Filters
@@ -116,10 +146,7 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
   useEffect(() => {
     if (initialWeekId) {
       const week = weeks.find(w => w.id === initialWeekId)
-      if (week) {
-        setSelectedWeek(week)
-        setIsDetailOpen(true)
-      }
+      if (week) setSelectedWeek(week)
     }
   }, [initialWeekId, weeks])
 
@@ -132,19 +159,36 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
     }
   }, [weeks, selectedWeek?.id])
 
+  // Clic semaine → vue jours (pas de panel)
   const handleWeekClick = (week: WeekData) => {
     setSelectedWeek(week)
-    setIsDetailOpen(true)
   }
 
-  const handleAddProject = () => {
-    if (selectedWeek && newProjectId) {
-      addTimeEntry(selectedWeek.id, {
-        projectId: newProjectId,
-        hours: 20,
-      })
-      setNewProjectId("")
-    }
+  // Retour à la liste des semaines
+  const handleBackToWeeks = () => {
+    setSelectedWeek(null)
+    if (onPanelClose) onPanelClose()
+  }
+
+  // Clic sur un jour → ouvre le panel
+  const handleDayClick = (day: DayOfWeek) => {
+    setSelectedDay(day)
+    setIsDayPanelOpen(true)
+  }
+
+  // Ajouter une activité pour le jour sélectionné (dans le panel)
+  const handleAddActivity = () => {
+    if (!selectedWeek || !selectedDay || remainingHours <= 0) return
+    const dayHours  = selectedWeek.entries.filter(e => e.dayOfWeek === selectedDay).reduce((s, e) => s + e.hours, 0)
+    if (dayHours >= 7) return
+    const usedIds   = selectedWeek.entries.filter(e => e.dayOfWeek === selectedDay).map(e => e.projectId)
+    const available = projects.filter(p => !usedIds.includes(p.id))
+    if (available.length === 0) return
+    addTimeEntry(selectedWeek.id, {
+      projectId: available[0].id,
+      hours: Math.min(7 - dayHours, remainingHours),
+      dayOfWeek: selectedDay,
+    })
   }
 
   const handleHoursChange = (entryId: string, hours: number) => {
@@ -165,17 +209,22 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
 
   const getProjectById = (id: string) => projects.find((p) => p.id === id)
 
-  const usedProjectIds = selectedWeek?.entries.map((e) => e.projectId) || []
-  const availableProjects = projects.filter((p) => !usedProjectIds.includes(p.id))
-
   const handleCalendarAdd = (weekNumber?: number, date?: Date) => {
-    const targetWeek = weekNumber 
+    const targetWeek = weekNumber
       ? weeks.find(w => w.weekNumber === weekNumber)
       : weeks.find(w => w.isCurrent)
-    
-    if (targetWeek) {
-      setSelectedWeek(targetWeek)
-      setIsDetailOpen(true)
+    if (!targetWeek) return
+    // Passer en vue liste pour afficher la vue jours
+    setPointageView("liste")
+    setSelectedWeek(targetWeek)
+    // Si une date précise est fournie, ouvrir directement le panel du jour
+    if (date) {
+      const dayMap: Record<number, DayOfWeek> = { 1: "lun", 2: "mar", 3: "mer", 4: "jeu", 5: "ven" }
+      const targetDay = dayMap[date.getDay()]
+      if (targetDay) {
+        setSelectedDay(targetDay)
+        setIsDayPanelOpen(true)
+      }
     }
   }
 
@@ -189,13 +238,6 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
     const full = Math.floor(h)
     const hasHalf = h % 1 !== 0
     return hasHalf ? `${full}h30` : `${full}h`
-  }
-
-  /** Génère les options de 0 à max par pas de 0.5 */
-  const generateHoursOptions = (max: number) => {
-    const opts: number[] = []
-    for (let h = 0; h <= max; h += 0.5) opts.push(h)
-    return opts
   }
 
   /** Heures déjà utilisées sur la semaine sélectionnée (sauf l'entrée courante) */
@@ -297,10 +339,10 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
                         <button
                           key={option.value}
                           onClick={() => setFilterWeek(option.value)}
-                          className={`px-3 py-2 text-xs font-medium rounded-md transition-all ${
+                          className={`px-3 py-2 text-xs font-medium rounded-md border transition-all ${
                             filterWeek === option.value
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                              ? 'border-primary text-primary bg-background'
+                              : 'border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
                           }`}
                         >
                           {option.label}
@@ -342,10 +384,10 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
                         <button
                           key={option.value}
                           onClick={() => setFilterHasAbsence(option.value)}
-                          className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
+                          className={`flex-1 px-3 py-2 text-xs font-medium rounded-md border transition-all ${
                             filterHasAbsence === option.value
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                              ? 'border-primary text-primary bg-background'
+                              : 'border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
                           }`}
                         >
                           {option.label}
@@ -402,266 +444,386 @@ export function TimesheetView({ initialWeekId, initialDate, openPanelOnMount, on
       )}
 
       {pointageView === "liste" ? (
-        <div className="divide-y divide-border">
-          {filteredWeeks.map((week) => {
-            const isPast = isPastWeek(week.weekNumber)
-            const stats = getWeekStats(week)
-            const projectNames = getProjectNames(week)
-            
-            // Données pour l'InfoCardPopover
-            const weekCardStats = [
-              ...week.entries.map(entry => {
-                const p = projects.find(proj => proj.id === entry.projectId)
-                return { label: p?.name || "Projet", value: formatHoursLabel(entry.hours) }
-              }),
-              ...(week.absenceCount > 0
-                ? [{ label: "Absences", value: `${week.absenceCount} jour${week.absenceCount > 1 ? "s" : ""}`, subtle: true }]
-                : []),
-            ]
-
-            return (
-              <div
-                key={week.id}
-                className={`flex items-center justify-between py-4 cursor-pointer transition-all group
-                  ${isPast ? "opacity-50 hover:opacity-70" : "hover:bg-muted/30"}
-                  ${week.isCurrent ? "bg-blue-50 dark:bg-blue-950/30 border-l-4 border-l-blue-500 pl-4 -ml-4" : ""}
-                `}
-                onClick={() => handleWeekClick(week)}
-              >
-                {/* Colonne gauche */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">Semaine {week.weekNumber}</span>
-                    {week.isCurrent && (
-                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900 text-xs font-normal">
-                        En cours
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {week.startDate} - {week.endDate}
-                  </p>
-
-                  {/* Badges — hover card uniquement sur cette zone */}
-                  <InfoCardPopover
-                    variant="stats"
-                    trigger="hover"
-                    title={`Semaine ${week.weekNumber}`}
-                    subtitle={`${week.startDate} – ${week.endDate}`}
-                    theme="default"
-                    side="right"
-                    align="start"
-                    width="w-64"
-                    stats={weekCardStats}
-                    triggerClassName="flex items-center gap-2 mt-2 flex-wrap"
+        <>
+          {/* ── VUE JOURS (semaine sélectionnée) ────────────────────────────── */}
+          {selectedWeek ? (
+            <div className="border border-border rounded-lg overflow-hidden">
+              {/* Header de la semaine */}
+              <div className={`flex items-center justify-between px-4 py-3 border-b border-border ${selectedWeek.isCurrent ? "bg-blue-50 dark:bg-blue-950/30" : "bg-muted/40"}`}>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleBackToWeeks}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <>
-                      <Badge className={`text-xs font-normal ${stats.projectCount > 0 ? "bg-primary text-primary-foreground hover:bg-primary" : "bg-muted text-muted-foreground hover:bg-muted"}`}>
-                        {stats.projectCount} Projet{stats.projectCount > 1 ? "s" : ""}
-                      </Badge>
-                      <Badge variant="outline" className={`text-xs font-normal ${stats.absenceCount > 0 ? "border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400" : "border-border text-muted-foreground"}`}>
-                        {stats.absenceCount} absence{stats.absenceCount > 1 ? "s" : ""}
-                      </Badge>
-                    </>
-                  </InfoCardPopover>
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <Separator orientation="vertical" className="h-4" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground">Semaine {selectedWeek.weekNumber}</span>
+                      {selectedWeek.isCurrent && (
+                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 hover:bg-amber-100 text-xs font-normal">
+                          En cours
+                        </Badge>
+                      )}
+                      {isPastWeek(selectedWeek.weekNumber) && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <History className="w-3 h-3" />
+                          <span>Passée</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{selectedWeek.startDate} – {selectedWeek.endDate}</p>
+                  </div>
                 </div>
-
-                {/* Colonne droite */}
-                <div className="flex items-center gap-6">
+                {/* Progress semaine */}
+                {(() => {
+                  const absH = absences.filter(a => a.weekId === selectedWeek.id && a.status === "approuvee" && a.dayOfWeek).length * 7
+                  const effectiveTotal = totalHoursUsed + absH
+                  return (
+                <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="font-semibold text-foreground">{week.totalHours}h</p>
-                    <p className="text-xs text-muted-foreground">/{week.targetHours}h</p>
+                    <p className="text-sm font-bold text-foreground">{effectiveTotal}h <span className="text-xs font-normal text-muted-foreground">/ {TARGET_HOURS}h</span></p>
+                    <Progress
+                      value={(effectiveTotal / TARGET_HOURS) * 100}
+                      className={`h-1.5 w-28 bg-muted ${effectiveTotal >= TARGET_HOURS ? "[&>div]:bg-green-500" : "[&>div]:bg-blue-500"}`}
+                    />
                   </div>
-                  <div className="flex flex-col items-end gap-1 min-w-24">
-                    <Badge 
-                      className={`text-xs font-normal ${
-                        week.status === "complet" 
-                          ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-300" 
-                          : "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900 dark:text-red-300"
-                      }`}
-                    >
-                      {week.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {isPast ? "passee" : week.isCurrent ? "cette semaine" : "a venir"}
-                    </span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform group-hover:translate-x-1" />
+                  <Badge variant="outline" className={`text-xs font-normal ${
+                    selectedWeek.status === "complet"
+                      ? "border-green-500/50 text-green-700 dark:text-green-400"
+                      : "border-red-400/50 text-red-600 dark:text-red-400"
+                  }`}>
+                    {selectedWeek.status}
+                  </Badge>
                 </div>
+                  )
+                })()}
               </div>
-            )
-          })}
-          {filteredWeeks.length === 0 && (
-            <div className="py-12 text-center text-muted-foreground">
-              Aucune semaine ne correspond aux filtres
+
+              {/* Lignes jours */}
+              {(() => {
+                const weekAbsences = absences.filter(a =>
+                  a.weekId === selectedWeek.id && a.status === "approuvee" && a.dayOfWeek
+                )
+                return (
+                  <div className="divide-y divide-border">
+                    {DAYS.map((day) => {
+                      const dayEntries   = selectedWeek.entries.filter(e => e.dayOfWeek === day)
+                      const dayHours     = dayEntries.reduce((s, e) => s + e.hours, 0)
+                      const dayAbsence   = weekAbsences.find(a => a.dayOfWeek === day)
+                      const effectiveH   = dayAbsence ? 7 : dayHours
+                      const uniqueIds    = [...new Set(dayEntries.map(e => e.projectId))]
+
+                      const absenceTypeColor: Record<string, string> = {
+                        conges_payes: "bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-900/40 dark:text-violet-300",
+                        maladie:      "bg-red-100 text-red-700 border-red-300 dark:bg-red-900/40 dark:text-red-300",
+                        teletravail:  "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900/40 dark:text-sky-300",
+                        sans_solde:   "bg-muted text-muted-foreground border-border",
+                      }
+
+                      if (dayAbsence) {
+                        // Jour avec absence → non cliquable, style distinct
+                        return (
+                          <div key={day} className="grid grid-cols-[1fr_auto_90px_32px] items-center px-4 py-3 bg-muted/20 opacity-80">
+                            <span className="text-sm font-medium text-foreground">{DAY_LABELS[day]}</span>
+                            <div className="pr-4">
+                              <Badge variant="outline" className={`text-xs font-normal ${absenceTypeColor[dayAbsence.type] || ""}`}>
+                                {dayAbsence.typeLabel}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <span className="text-sm font-semibold text-muted-foreground">7h</span>
+                              <span className="text-xs text-muted-foreground"> / 7h</span>
+                            </div>
+                            <div className="w-4 mx-auto" />
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <div
+                          key={day}
+                          className="grid grid-cols-[1fr_auto_90px_32px] items-center px-4 py-3 hover:bg-muted/30 cursor-pointer transition-colors group"
+                          onClick={() => handleDayClick(day)}
+                        >
+                          <span className="text-sm font-medium text-foreground">{DAY_LABELS[day]}</span>
+
+                          <div className="flex items-center gap-1.5 pr-4 flex-wrap">
+                            {uniqueIds.length > 0 ? (
+                              uniqueIds.slice(0, 3).map(pid => {
+                                const p = getProjectById(pid)
+                                return (
+                                  <span key={pid} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-border bg-background text-foreground/70">
+                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: p?.color || "#888" }} />
+                                    {p?.name || "—"}
+                                  </span>
+                                )
+                              })
+                            ) : (
+                              <span className="text-xs text-muted-foreground/40">—</span>
+                            )}
+                            {uniqueIds.length > 3 && <span className="text-xs text-muted-foreground">+{uniqueIds.length - 3}</span>}
+                          </div>
+
+                          <div className="text-center">
+                            <span className={`text-sm font-semibold ${effectiveH >= 7 ? "text-green-600 dark:text-green-400" : effectiveH > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground/40"}`}>
+                              {formatHoursLabel(effectiveH)}
+                            </span>
+                            <span className="text-xs text-muted-foreground"> / 7h</span>
+                          </div>
+
+                          <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 mx-auto" />
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+          ) : (
+            /* ── VUE SEMAINES (liste) ─────────────────────────────────────── */
+            <div className="border border-border rounded-lg overflow-hidden">
+
+              <div className="divide-y divide-border">
+                {filteredWeeks.map((week) => {
+                  const isPast = isPastWeek(week.weekNumber)
+                  const stats  = getWeekStats(week)
+
+                  const weekCardStats = [
+                    ...week.entries.reduce<{label:string;value:string}[]>((acc, entry) => {
+                      const p = projects.find(proj => proj.id === entry.projectId)
+                      const existing = acc.find(a => a.label === (p?.name || "Projet"))
+                      if (existing) {
+                        existing.value = formatHoursLabel(parseFloat(existing.value) + entry.hours)
+                      } else {
+                        acc.push({ label: p?.name || "Projet", value: formatHoursLabel(entry.hours) })
+                      }
+                      return acc
+                    }, []),
+                    ...(week.absenceCount > 0 ? [{ label: "Absences", value: `${week.absenceCount}j`, subtle: true }] : []),
+                  ]
+
+                  const isPastIncomplete = isPast && week.status !== "complet"
+
+                  return (
+                    <div
+                      key={week.id}
+                      className={`grid grid-cols-[1fr_88px_32px] items-center px-4 py-3 cursor-pointer transition-colors group
+                        ${week.isCurrent        ? "bg-blue-50 dark:bg-blue-950/30 border-l-2 border-l-blue-500"
+                        : isPastIncomplete      ? "opacity-40 border-l-2 border-l-red-400"
+                        : isPast               ? "opacity-40"
+                        : ""}
+                      `}
+                      onClick={() => handleWeekClick(week)}
+                    >
+                      {/* Identité semaine */}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">Semaine {week.weekNumber}</span>
+                          {week.isCurrent && (
+                            <Badge variant="outline" className="border-amber-400/60 text-amber-700 dark:text-amber-400 text-xs font-normal">
+                              En cours
+                            </Badge>
+                          )}
+                          {isPastIncomplete && (
+                            <Badge variant="outline" className="border-red-400/50 text-red-600 dark:text-red-400 text-xs font-normal">
+                              À compléter
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{week.startDate} – {week.endDate}</p>
+
+                        {/* Badges activités + absences avec hover */}
+                        <InfoCardPopover
+                          variant="stats"
+                          trigger="hover"
+                          title={`Semaine ${week.weekNumber}`}
+                          subtitle={`${week.startDate} – ${week.endDate}`}
+                          theme="default"
+                          side="right"
+                          align="start"
+                          width="w-64"
+                          stats={weekCardStats}
+                          triggerClassName="flex items-center gap-2 mt-1.5 flex-wrap"
+                        >
+                          <>
+                            <Badge variant="outline" className={`text-xs font-normal ${stats.projectCount > 0 ? "border-primary/50 text-primary" : "border-border text-muted-foreground"}`}>
+                              {stats.projectCount} activité{stats.projectCount > 1 ? "s" : ""}
+                            </Badge>
+                            {stats.absenceCount > 0 && (
+                              <Badge variant="outline" className="text-xs font-normal border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+                                {stats.absenceCount} absence{stats.absenceCount > 1 ? "s" : ""}
+                              </Badge>
+                            )}
+                          </>
+                        </InfoCardPopover>
+                      </div>
+
+                      {/* Heures + statut empilés */}
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="text-sm font-semibold text-foreground tabular-nums">
+                          {week.totalHours}h<span className="text-xs font-normal text-muted-foreground">/{week.targetHours}h</span>
+                        </span>
+                        <Badge variant="outline" className={`text-xs font-normal ${
+                          week.status === "complet"
+                            ? "border-green-500/50 text-green-700 dark:text-green-400"
+                            : "border-red-400/50 text-red-600 dark:text-red-400"
+                        }`}>
+                          {week.status}
+                        </Badge>
+                      </div>
+
+                      {/* Chevron */}
+                      <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 mx-auto" />
+                    </div>
+                  )
+                })}
+                {filteredWeeks.length === 0 && (
+                  <div className="py-10 text-center text-sm text-muted-foreground">
+                    Aucune semaine ne correspond aux filtres
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
+        </>
       ) : (
         <TimesheetCalendar 
           weeks={weeks} 
-          onWeekSelect={handleWeekClick}
+          onWeekSelect={(week) => { setPointageView("liste"); handleWeekClick(week) }}
           onAddClick={handleCalendarAdd}
           onDateClick={(date, weekNumber) => handleCalendarAdd(weekNumber, date)}
         />
       )}
 
-      {/* Detail Sheet */}
-      <Sheet open={isDetailOpen} onOpenChange={(open) => {
-        setIsDetailOpen(open)
-        if (!open && onPanelClose) onPanelClose()
+      {/* ── PANEL JOUR (Sheet latéral) ──────────────────────────────────────────── */}
+      <Sheet open={isDayPanelOpen} onOpenChange={(open) => {
+        setIsDayPanelOpen(open)
+        if (!open) setSelectedDay(null)
       }}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto p-0">
           {/* Bandeau semaine passée */}
           {selectedWeek && isPastWeek(selectedWeek.weekNumber) && (
             <div className="flex items-center gap-2 px-6 py-2.5 bg-muted/60 border-b border-border text-xs text-muted-foreground">
               <History className="w-3.5 h-3.5" />
-              <span>Semaine passee — modifications encore possibles</span>
+              <span>Semaine passée — modifications encore possibles</span>
             </div>
           )}
 
           <div className="p-6">
             <SheetHeader className="mb-6">
-              <SheetTitle className="text-xl font-bold uppercase flex items-center gap-3">
-                SEMAINE {selectedWeek?.weekNumber}
-                {selectedWeek && isPastWeek(selectedWeek.weekNumber) && (
-                  <Badge variant="outline" className="text-xs font-normal normal-case text-muted-foreground border-muted-foreground/40">
-                    Passee
-                  </Badge>
-                )}
+              <SheetTitle className="text-xl font-bold">
+                {selectedDay ? DAY_LABELS[selectedDay] : "—"}
               </SheetTitle>
-              <SheetDescription className="text-sm">
-                {selectedWeek?.startDate} - {selectedWeek?.endDate}
+              <SheetDescription className="text-sm text-muted-foreground">
+                Semaine {selectedWeek?.weekNumber} · {selectedWeek?.startDate} – {selectedWeek?.endDate}
               </SheetDescription>
             </SheetHeader>
 
-            <div className="space-y-6">
-              {/* Total heures semaine */}
-              <div className="space-y-3 p-4 border border-border rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Total heures semaine</span>
-                  <span className="text-xs text-muted-foreground">
-                    {remainingHours > 0
-                      ? `${formatHoursLabel(remainingHours)} disponibles`
-                      : "Quota atteint"}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-foreground">{selectedWeek?.totalHours}</span>
-                  <span className="text-sm text-muted-foreground">/{TARGET_HOURS}h</span>
-                </div>
-                <Progress 
-                  value={((selectedWeek?.totalHours || 0) / TARGET_HOURS) * 100} 
-                  className={`h-2 bg-muted ${totalHoursUsed >= TARGET_HOURS ? "[&>div]:bg-red-500" : "[&>div]:bg-blue-500"}`}
-                />
+            {/* Barre de progression semaine */}
+            <div className="p-3 border border-border rounded-lg bg-muted/20 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground">Semaine en cours</span>
+                <span className="text-xs font-medium text-foreground">
+                  {formatHoursLabel(totalHoursUsed)} / {TARGET_HOURS}h
+                  {remainingHours > 0 && (
+                    <span className="text-muted-foreground font-normal"> · {formatHoursLabel(remainingHours)} dispo</span>
+                  )}
+                </span>
               </div>
-
-              <Separator />
-
-              {/* Liste Projets */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">Projets</span>
-                  <Button 
-                    size="sm" 
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground h-7 text-xs"
-                    onClick={() => {
-                      if (availableProjects.length > 0 && remainingHours > 0) {
-                        addTimeEntry(selectedWeek!.id, {
-                          projectId: availableProjects[0].id,
-                          hours: Math.min(7, remainingHours),
-                        })
-                      }
-                    }}
-                    disabled={availableProjects.length === 0 || remainingHours <= 0}
-                  >
-                    Ajouter
-                  </Button>
-                </div>
-
-                {selectedWeek?.entries.map((entry) => {
-                  const project = getProjectById(entry.projectId)
-                  const otherHours = getOtherHours(entry.id)
-                  const maxForEntry = Math.max(0, TARGET_HOURS - otherHours)
-                  const hoursOptions = generateHoursOptions(maxForEntry)
-
-                  return (
-                    <div key={entry.id} className="space-y-2 p-4 border border-border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Projet</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={entry.projectId}
-                          onValueChange={() => {}}
-                        >
-                          <SelectTrigger className="flex-1 h-9">
-                            <SelectValue>
-                              {project?.name || "Selectionner un projet"}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {projects.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: p.color }} />
-                                  {p.name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select
-                          value={entry.hours.toString()}
-                          onValueChange={(value) => handleHoursChange(entry.id, parseFloat(value))}
-                        >
-                          <SelectTrigger className="w-24 h-9">
-                            <SelectValue>{formatHoursLabel(entry.hours)}</SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {hoursOptions.map((h) => (
-                              <SelectItem key={h} value={h.toString()}>
-                                {formatHoursLabel(h)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemoveEntry(entry.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {selectedWeek?.entries.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Aucun projet ajoute
-                  </p>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Conges Section - Read Only */}
-              <div className="space-y-2">
-                <span className="text-sm font-medium text-foreground">Conges</span>
-                <div className="w-full h-9 px-3 flex items-center border border-border rounded-md bg-muted text-muted-foreground text-sm">
-                  Type
-                </div>
-                <p className="text-xs text-muted-foreground">Les conges sont geres dans la section Absence</p>
-              </div>
-
-              {/* Save Button */}
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                Enregistrer
-              </Button>
+              <Progress
+                value={(totalHoursUsed / TARGET_HOURS) * 100}
+                className={`h-1.5 bg-muted ${totalHoursUsed >= TARGET_HOURS ? "[&>div]:bg-green-500" : "[&>div]:bg-blue-500"}`}
+              />
             </div>
+
+            {/* Activités du jour */}
+            <div className="space-y-3">
+              {(() => {
+                const dayEntries = selectedDay
+                  ? (selectedWeek?.entries.filter(e => e.dayOfWeek === selectedDay) || [])
+                  : []
+                const dayHours = dayEntries.reduce((s, e) => s + e.hours, 0)
+                const canAdd = remainingHours > 0 && dayHours < 7 &&
+                  projects.filter(p => !dayEntries.map(e => e.projectId).includes(p.id)).length > 0
+
+                return (
+                  <>
+                    {dayEntries.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Aucune activité pour cette journée
+                      </p>
+                    )}
+                    {dayEntries.map((entry) => {
+                      const project    = getProjectById(entry.projectId)
+                      const otherHours = getOtherHours(entry.id)
+                      const maxDay     = Math.min(7 - (dayHours - entry.hours), TARGET_HOURS - otherHours)
+
+                      return (
+                        <div key={entry.id} className="flex items-center gap-2 p-3 border border-border rounded-lg bg-background">
+                          <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: project?.color || "#888" }} />
+                          <Select value={entry.projectId} onValueChange={() => {}}>
+                            <SelectTrigger className="flex-1 h-9 text-sm">
+                              <SelectValue>{project?.name || "—"}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {projects.map(p => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: p.color }} />
+                                    {p.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <HoursInput
+                            value={entry.hours}
+                            max={Math.max(0, maxDay)}
+                            onChange={h => handleHoursChange(entry.id, h)}
+                          />
+                          <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemoveEntry(entry.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+
+                    {/* Ajouter activité */}
+                    <button
+                      type="button"
+                      onClick={handleAddActivity}
+                      disabled={!canAdd}
+                      className="w-full flex items-center justify-center gap-2 h-10 text-sm text-muted-foreground border border-dashed border-border rounded-lg hover:border-primary hover:text-primary disabled:opacity-30 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Ajouter une activité
+                    </button>
+
+                    {/* Total du jour */}
+                    {dayEntries.length > 0 && (
+                      <div className="flex items-center justify-between pt-2 px-1">
+                        <span className="text-xs text-muted-foreground">Total du jour</span>
+                        <span className={`text-sm font-semibold ${dayHours >= 7 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>
+                          {formatHoursLabel(dayHours)} / 7h
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+
+            <Separator className="my-6" />
+
+            <Button
+              className="w-full"
+              onClick={() => setIsDayPanelOpen(false)}
+            >
+              Enregistrer
+            </Button>
           </div>
         </SheetContent>
       </Sheet>

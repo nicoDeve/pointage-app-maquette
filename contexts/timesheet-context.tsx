@@ -8,10 +8,13 @@ export interface Project {
   color: string
 }
 
+export type DayOfWeek = "lun" | "mar" | "mer" | "jeu" | "ven"
+
 export interface TimeEntry {
   id: string
   projectId: string
   hours: number
+  dayOfWeek: DayOfWeek
 }
 
 export interface WeekData {
@@ -31,12 +34,14 @@ export interface WeekData {
 
 export interface Absence {
   id: string
-  type: "conges_payes" | "maladie" | "sans_solde"
+  type: "conges_payes" | "maladie" | "sans_solde" | "teletravail"
   typeLabel: string
   startDate: string
   endDate: string
   duration: number
   status: "approuvee" | "en_attente" | "refusee"
+  weekId?: string
+  dayOfWeek?: DayOfWeek
 }
 
 interface TimesheetContextType {
@@ -67,11 +72,32 @@ const initialProjects: Project[] = [
 ]
 
 const initialWeeks: WeekData[] = [
+  // ── Semaines passées ─────────────────────────────────────────────────────────
   {
-    id: "w39",
-    weekNumber: 39,
-    startDate: "oct 16",
-    endDate: "oct 22, 2026",
+    id: "w33",
+    weekNumber: 33,
+    startDate: "11 aoû",
+    endDate: "15 aoû 2026",
+    totalHours: 35,
+    targetHours: 35,
+    status: "complet",
+    isCurrent: false,
+    projectCount: 2,
+    absenceCount: 0,
+    tags: [],
+    entries: [
+      { id: "w33e1", projectId: "1", hours: 7, dayOfWeek: "lun" },
+      { id: "w33e2", projectId: "1", hours: 7, dayOfWeek: "mar" },
+      { id: "w33e3", projectId: "2", hours: 7, dayOfWeek: "mer" },
+      { id: "w33e4", projectId: "1", hours: 7, dayOfWeek: "jeu" },
+      { id: "w33e5", projectId: "2", hours: 7, dayOfWeek: "ven" },
+    ],
+  },
+  {
+    id: "w34",
+    weekNumber: 34,
+    startDate: "18 aoû",
+    endDate: "22 aoû 2026",
     totalHours: 35,
     targetHours: 35,
     status: "complet",
@@ -80,112 +106,220 @@ const initialWeeks: WeekData[] = [
     absenceCount: 0,
     tags: [],
     entries: [
-      { id: "e1", projectId: "1", hours: 20 },
-      { id: "e2", projectId: "2", hours: 10 },
-      { id: "e3", projectId: "4", hours: 5 },
+      { id: "w34e1", projectId: "1", hours: 7,   dayOfWeek: "lun" },
+      { id: "w34e2", projectId: "3", hours: 3.5, dayOfWeek: "mar" },
+      { id: "w34e3", projectId: "4", hours: 3.5, dayOfWeek: "mar" },
+      { id: "w34e4", projectId: "1", hours: 7,   dayOfWeek: "mer" },
+      { id: "w34e5", projectId: "3", hours: 7,   dayOfWeek: "jeu" },
+      { id: "w34e6", projectId: "4", hours: 7,   dayOfWeek: "ven" },
     ],
   },
   {
-    id: "w40",
-    weekNumber: 40,
-    startDate: "oct 9",
-    endDate: "oct 15, 2026",
+    id: "w35",
+    weekNumber: 35,
+    startDate: "25 aoû",
+    endDate: "29 aoû 2026",
+    totalHours: 21,
+    targetHours: 35,
+    status: "incomplet",
+    isCurrent: false,
+    projectCount: 1,
+    absenceCount: 2,
+    tags: [],
+    entries: [
+      { id: "w35e1", projectId: "2", hours: 7, dayOfWeek: "lun" },
+      { id: "w35e2", projectId: "2", hours: 7, dayOfWeek: "mar" },
+      { id: "w35e3", projectId: "2", hours: 7, dayOfWeek: "mer" },
+    ],
+  },
+  {
+    id: "w36",
+    weekNumber: 36,
+    startDate: "01 sep",
+    endDate: "05 sep 2026",
     totalHours: 35,
     targetHours: 35,
     status: "complet",
     isCurrent: false,
     projectCount: 2,
-    absenceCount: 1,
+    absenceCount: 0,
     tags: [],
     entries: [
-      { id: "e4", projectId: "1", hours: 20 },
-      { id: "e5", projectId: "3", hours: 15 },
+      { id: "w36e1", projectId: "1", hours: 7,   dayOfWeek: "lun" },
+      { id: "w36e2", projectId: "1", hours: 7,   dayOfWeek: "mar" },
+      { id: "w36e3", projectId: "3", hours: 3.5, dayOfWeek: "mer" },
+      { id: "w36e4", projectId: "1", hours: 3.5, dayOfWeek: "mer" },
+      { id: "w36e5", projectId: "3", hours: 7,   dayOfWeek: "jeu" },
+      { id: "w36e6", projectId: "1", hours: 7,   dayOfWeek: "ven" },
     ],
   },
   {
+    id: "w37",
+    weekNumber: 37,
+    startDate: "08 sep",
+    endDate: "12 sep 2026",
+    totalHours: 35,
+    targetHours: 35,
+    status: "complet",
+    isCurrent: false,
+    projectCount: 3,
+    absenceCount: 0,
+    tags: [],
+    entries: [
+      { id: "w37e1", projectId: "1", hours: 7,   dayOfWeek: "lun" },
+      { id: "w37e2", projectId: "2", hours: 3.5, dayOfWeek: "mar" },
+      { id: "w37e3", projectId: "4", hours: 3.5, dayOfWeek: "mar" },
+      { id: "w37e4", projectId: "1", hours: 7,   dayOfWeek: "mer" },
+      { id: "w37e5", projectId: "2", hours: 7,   dayOfWeek: "jeu" },
+      { id: "w37e6", projectId: "4", hours: 7,   dayOfWeek: "ven" },
+    ],
+  },
+  {
+    id: "w38",
+    weekNumber: 38,
+    startDate: "15 sep",
+    endDate: "19 sep 2026",
+    totalHours: 14,
+    targetHours: 35,
+    status: "incomplet",
+    isCurrent: false,
+    projectCount: 1,
+    absenceCount: 3,
+    tags: [],
+    entries: [
+      { id: "w38e1", projectId: "3", hours: 7, dayOfWeek: "lun" },
+      { id: "w38e2", projectId: "3", hours: 7, dayOfWeek: "mar" },
+    ],
+  },
+  {
+    id: "w39",
+    weekNumber: 39,
+    startDate: "22 sep",
+    endDate: "26 sep 2026",
+    totalHours: 35,
+    targetHours: 35,
+    status: "complet",
+    isCurrent: false,
+    projectCount: 3,
+    absenceCount: 0,
+    tags: [],
+    entries: [
+      { id: "e1a", projectId: "1", hours: 7,   dayOfWeek: "lun" },
+      { id: "e1b", projectId: "2", hours: 3.5, dayOfWeek: "mar" },
+      { id: "e1c", projectId: "4", hours: 3.5, dayOfWeek: "mar" },
+      { id: "e1d", projectId: "1", hours: 7,   dayOfWeek: "mer" },
+      { id: "e1e", projectId: "2", hours: 7,   dayOfWeek: "jeu" },
+      { id: "e1f", projectId: "1", hours: 7,   dayOfWeek: "ven" },
+    ],
+  },
+  {
+    id: "w40",
+    weekNumber: 40,
+    startDate: "29 sep",
+    endDate: "03 oct 2026",
+    totalHours: 28,     // 4 jours travaillés × 7h (jeudi = maladie)
+    targetHours: 35,
+    status: "complet",  // complet car jour maladie comptabilisé
+    isCurrent: false,
+    projectCount: 2,
+    absenceCount: 1,
+    tags: [],
+    entries: [
+      { id: "e4a", projectId: "1", hours: 7, dayOfWeek: "lun" },
+      { id: "e4b", projectId: "3", hours: 7, dayOfWeek: "mar" },
+      { id: "e4c", projectId: "1", hours: 7, dayOfWeek: "mer" },
+      // jeu → maladie (absence a4)
+      { id: "e4e", projectId: "1", hours: 7, dayOfWeek: "ven" },
+    ],
+  },
+  // ── Semaine courante ─────────────────────────────────────────────────────────
+  {
     id: "w41",
     weekNumber: 41,
-    startDate: "oct 02",
-    endDate: "oct 08, 2026",
+    startDate: "06 oct",
+    endDate: "10 oct 2026",
     totalHours: 20,
     targetHours: 35,
     status: "incomplet",
     isCurrent: true,
-    projectCount: 0,
+    projectCount: 1,
     absenceCount: 0,
-    tags: ["work", "important"],
+    tags: [],
     entries: [
-      { id: "e6", projectId: "1", hours: 20 },
+      { id: "e6a", projectId: "1", hours: 7, dayOfWeek: "lun" },
+      { id: "e6b", projectId: "1", hours: 7, dayOfWeek: "mar" },
+      { id: "e6c", projectId: "1", hours: 6, dayOfWeek: "mer" },
     ],
   },
+  // ── Semaines à venir ─────────────────────────────────────────────────────────
   {
     id: "w42",
     weekNumber: 42,
-    startDate: "sep 25",
-    endDate: "oct 01, 2026",
+    startDate: "13 oct",
+    endDate: "17 oct 2026",
     totalHours: 0,
     targetHours: 35,
     status: "incomplet",
     isCurrent: false,
     projectCount: 0,
     absenceCount: 0,
-    tags: ["work", "important"],
+    tags: [],
     entries: [],
   },
   {
     id: "w43",
     weekNumber: 43,
-    startDate: "sep 25",
-    endDate: "oct 01, 2026",
+    startDate: "20 oct",
+    endDate: "24 oct 2026",
     totalHours: 0,
     targetHours: 35,
-    status: "complet",
+    status: "incomplet",
     isCurrent: false,
     projectCount: 0,
     absenceCount: 0,
-    tags: ["work", "important"],
+    tags: [],
     entries: [],
   },
   {
     id: "w44",
     weekNumber: 44,
-    startDate: "sep 25",
-    endDate: "oct 01, 2026",
+    startDate: "27 oct",
+    endDate: "31 oct 2026",
     totalHours: 0,
     targetHours: 35,
     status: "incomplet",
     isCurrent: false,
     projectCount: 0,
     absenceCount: 0,
-    tags: ["work", "important"],
+    tags: [],
     entries: [],
   },
   {
     id: "w45",
     weekNumber: 45,
-    startDate: "sep 25",
-    endDate: "oct 01, 2026",
+    startDate: "03 nov",
+    endDate: "07 nov 2026",
     totalHours: 0,
     targetHours: 35,
     status: "incomplet",
     isCurrent: false,
     projectCount: 0,
     absenceCount: 0,
-    tags: ["work", "important"],
+    tags: [],
     entries: [],
   },
   {
     id: "w46",
     weekNumber: 46,
-    startDate: "sep 25",
-    endDate: "oct 01, 2026",
+    startDate: "10 nov",
+    endDate: "14 nov 2026",
     totalHours: 0,
     targetHours: 35,
     status: "incomplet",
     isCurrent: false,
     projectCount: 0,
     absenceCount: 0,
-    tags: ["work", "important"],
+    tags: [],
     entries: [],
   },
 ]
@@ -217,6 +351,17 @@ const initialAbsences: Absence[] = [
     endDate: "27 déc. 2025",
     duration: 5,
     status: "refusee",
+  },
+  {
+    id: "a4",
+    type: "maladie",
+    typeLabel: "Maladie",
+    startDate: "02 oct. 2026",
+    endDate: "02 oct. 2026",
+    duration: 1,
+    status: "approuvee",
+    weekId: "w40",
+    dayOfWeek: "jeu",
   },
 ]
 
