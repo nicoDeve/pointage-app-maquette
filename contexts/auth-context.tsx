@@ -2,12 +2,16 @@
 
 import { createContext, useContext, useState, ReactNode } from "react"
 
+export type UserAccessLevel = "standard" | "super_admin"
+
 interface User {
   id: string
   name: string
   email: string
   avatar?: string
   role: string
+  /** Pour la maquette : onglet Journal (changelog) réservé au super admin */
+  accessLevel?: UserAccessLevel
 }
 
 interface AuthContextType {
@@ -29,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: "jean.dupont@company.com",
       avatar: "/placeholder.svg?height=40&width=40&query=professional+avatar",
       role: "Developpeur Senior",
+      accessLevel: "super_admin",
     })
   }
 

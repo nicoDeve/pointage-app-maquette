@@ -1,22 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useTheme } from "next-themes"
 import { useAuth } from "@/contexts/auth-context"
 import { useTimesheet } from "@/contexts/timesheet-context"
 import { LoginPage } from "./login-page"
 import { Dashboard } from "./dashboard"
 import { TimesheetView } from "./timesheet-view"
 import { AbsencesView } from "./absences-view"
-import { ProjectsView } from "./projects-view"
 import { AdminView } from "./admin-view"
 import { SupportView } from "./support-view"
 import { ActivityLogPopover } from "./activity-log-popover"
 import { AppSidebar } from "./app-sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { Separator } from "@/components/ui/separator"
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -33,80 +30,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CalendarDays, Sun, Moon, PanelLeftClose, PanelLeft, LogOut } from "lucide-react"
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfQuarter, endOfQuarter } from "date-fns"
+import { format } from "date-fns"
 import { fr } from "date-fns/locale"
+import { getAppToday } from "@/lib/app-today"
+import { notifySaved } from "@/lib/notify"
 
 export function MainApp() {
   const { isAuthenticated, user, logout } = useAuth()
-  const { currentView, setCurrentView } = useTimesheet()
+  const { currentView, setCurrentView, weeks } = useTimesheet()
+  const { resolvedTheme, setTheme } = useTheme()
   const [selectedWeekId, setSelectedWeekId] = useState<string | undefined>(undefined)
-  const [isDarkMode, setIsDarkMode] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [openTimesheetPanel, setOpenTimesheetPanel] = useState(false)
   const [openAbsencePanel, setOpenAbsencePanel] = useState(false)
-  
-  // Date range state
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: new Date(2026, 0, 1),
-    to: new Date(2026, 11, 31)
-  })
-  const [periodPreset, setPeriodPreset] = useState<string>("year")
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
-  const [tempDateFrom, setTempDateFrom] = useState<Date | undefined>(dateRange.from)
-  const [tempDateTo, setTempDateTo] = useState<Date | undefined>(dateRange.to)
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-  }, [isDarkMode])
+  const isDarkMode = resolvedTheme === "dark"
+  const toggleTheme = () => setTheme(isDarkMode ? "light" : "dark")
 
-  const handlePeriodChange = (preset: string) => {
-    setPeriodPreset(preset)
-    const now = new Date(2026, 9, 15)
-    
-    let newFrom: Date
-    let newTo: Date
-    
-    switch (preset) {
-      case "month":
-        newFrom = startOfMonth(now)
-        newTo = endOfMonth(now)
-        break
-      case "quarter":
-        newFrom = startOfQuarter(now)
-        newTo = endOfQuarter(now)
-        break
-      case "year":
-        newFrom = startOfYear(now)
-        newTo = endOfYear(now)
-        break
-      default:
-        return
-    }
-    
-    setTempDateFrom(newFrom)
-    setTempDateTo(newTo)
-    setDateRange({ from: newFrom, to: newTo })
-    setIsDatePickerOpen(false)
-  }
-
-  const handleApplyCustomDates = () => {
-    if (tempDateFrom && tempDateTo) {
-      setDateRange({ from: tempDateFrom, to: tempDateTo })
-    }
-    setIsDatePickerOpen(false)
-  }
-
-  const formatDateRange = () => {
-    const fromStr = format(dateRange.from, "MMM yyyy", { locale: fr })
-    const toStr = format(dateRange.to, "MMM yyyy", { locale: fr })
-    if (fromStr === toStr) return fromStr
-    return `${fromStr} - ${toStr}`
-  }
-
+  const appToday = getAppToday()
+  const appTodayLongLabel = (() => {
+    const raw = format(appToday, "EEEE d MMMM yyyy", { locale: fr })
+    return raw.charAt(0).toUpperCase() + raw.slice(1)
+  })()
   if (!isAuthenticated) {
     return <LoginPage />
   }
@@ -119,25 +64,20 @@ export function MainApp() {
   }
 
   const handleDashboardNavigate = (view: string, openPanel?: boolean) => {
+    const currentWeekId = weeks.find((w) => w.isCurrent)?.id
     if (view === "pointage") {
       setCurrentView("pointage")
       if (openPanel) {
-        // Actions rapides "Saisir mes heures" → naviguer + ouvrir le panel de saisie
-        setSelectedWeekId("w41")
+        setSelectedWeekId(currentWeekId ?? weeks[weeks.length - 1]?.id)
         setOpenTimesheetPanel(true)
       } else {
-        // Aperçu hebdomadaire → naviguer uniquement, sans ouvrir le panel
         setSelectedWeekId(undefined)
       }
     } else if (view === "absence") {
       setCurrentView("absence")
       if (openPanel) {
-        // Actions rapides "Demander un congé" → naviguer + ouvrir le formulaire
         setOpenAbsencePanel(true)
       }
-      // Demandes en attente → naviguer uniquement
-    } else if (view === "projects") {
-      setCurrentView("pointage")
     }
   }
 
@@ -150,6 +90,7 @@ export function MainApp() {
     a.download = 'pointage-export.csv'
     a.click()
     window.URL.revokeObjectURL(url)
+    notifySaved("Export lancé", "Le fichier CSV a été téléchargé.")
   }
 
   const handleBreadcrumbClick = (item: string) => {
@@ -249,75 +190,11 @@ export function MainApp() {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
-            {/* Date Range Picker */}
-            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-9 font-normal">
-                  <CalendarDays className="w-4 h-4" />
-                  {formatDateRange()}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <div className="border-b border-border">
-                  <div className="flex">
-                    {[
-                      { value: "month", label: "Mois" },
-                      { value: "quarter", label: "Trimestre" },
-                      { value: "year", label: "Annee" },
-                      { value: "custom", label: "Personnalise" },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => option.value === "custom" ? setPeriodPreset("custom") : handlePeriodChange(option.value)}
-                        className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-                          periodPreset === option.value 
-                            ? "bg-background text-foreground border-b-2 border-primary" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {periodPreset === "custom" && (
-                  <div className="p-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date de debut</label>
-                        <Calendar
-                          mode="single"
-                          selected={tempDateFrom}
-                          onSelect={setTempDateFrom}
-                          className="rounded-md border p-2"
-                          initialFocus
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date de fin</label>
-                        <Calendar
-                          mode="single"
-                          selected={tempDateTo}
-                          onSelect={setTempDateTo}
-                          className="rounded-md border p-2"
-                        />
-                      </div>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setIsDatePickerOpen(false)}>
-                        Annuler
-                      </Button>
-                      <Button size="sm" onClick={handleApplyCustomDates}>
-                        Appliquer
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <div className="flex min-w-0 max-w-[min(100%,22rem)] items-center gap-1.5 text-xs text-muted-foreground sm:max-w-none sm:gap-2 sm:text-sm">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-70 sm:h-4 sm:w-4" />
+              <span className="truncate text-foreground font-medium">{appTodayLongLabel}</span>
+            </div>
 
             <ActivityLogPopover />
 
@@ -326,7 +203,7 @@ export function MainApp() {
               variant="outline" 
               size="icon" 
               className="h-9 w-9"
-              onClick={() => setIsDarkMode(!isDarkMode)}
+              onClick={toggleTheme}
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
@@ -349,12 +226,17 @@ export function MainApp() {
                   <p className="text-xs text-muted-foreground">{user?.email || "email@example.com"}</p>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setIsDarkMode(!isDarkMode)}>
+                <DropdownMenuItem onClick={toggleTheme}>
                   {isDarkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
                   {isDarkMode ? "Mode clair" : "Mode sombre"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={() => {
+                    logout()
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
                   <LogOut className="w-4 h-4 mr-2" />
                   Deconnexion
                 </DropdownMenuItem>
@@ -363,8 +245,8 @@ export function MainApp() {
           </div>
         </header>
 
-        {/* Main Content */}
-        <div className="flex-1 overflow-auto px-4 py-4">
+        {/* Main Content — min-h-0 pour que les vues (ex. Admin onglets) puissent occuper la hauteur restante */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
           {renderView()}
         </div>
       </main>

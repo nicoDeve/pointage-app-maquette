@@ -1,6 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { NotificationCountPing } from "@/components/notification-count-ping"
+import { ToastPingLayer } from "@/components/toast-ping-layer"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -109,30 +111,33 @@ export function ActivityLogPopover() {
   const unread = MOCK_ACTIVITY_LOGS.filter((e) => e.unread).length
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9 shrink-0 relative"
-          aria-label="Journal d’activité"
-        >
-          <Bell className="h-4 w-4 text-muted-foreground" />
-          {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background bg-primary px-1 text-[10px] font-semibold tabular-nums leading-none text-primary-foreground">
-              {unread > 9 ? "9+" : unread}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="end" sideOffset={6}>
+    <div className="relative inline-flex shrink-0">
+      <ToastPingLayer />
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="relative z-[1] h-9 w-9 shrink-0 overflow-visible"
+            aria-label="Journal d’activité"
+          >
+            <Bell className="h-4 w-4 text-muted-foreground" />
+            <NotificationCountPing
+              count={unread}
+              variant="primary"
+              className="absolute -right-0.5 -top-0.5 z-[2]"
+              label="Entrées d’activité non lues"
+            />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-96 p-0" align="end" sideOffset={6}>
         <div className="px-4 py-3 border-b border-border bg-muted/30">
           <p className="text-sm font-semibold text-foreground">Activité récente</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Retards, validations congés / TT, modifications — aperçu (données fictives)
           </p>
         </div>
-        <ScrollArea className="h-[min(320px,55vh)]">
+        <ScrollArea className="h-[min(420px,65dvh)]">
           <div className="divide-y divide-border">
             {MOCK_ACTIVITY_LOGS.map((entry) => (
               <div
@@ -160,7 +165,8 @@ export function ActivityLogPopover() {
             ))}
           </div>
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }

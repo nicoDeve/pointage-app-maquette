@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { NotificationCountPing } from "@/components/notification-count-ping"
+import { ToastPingLayer } from "@/components/toast-ping-layer"
 import {
   LayoutDashboard,
   Clock,
@@ -107,22 +108,27 @@ export function AppSidebar({ currentView, onNavigate, notificationCount = 3 }: A
         {/* Section Administration */}
         <p className="text-xs text-sidebar-foreground/40 font-medium px-3 py-2 mt-4">Administration</p>
 
-        <button
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-            currentView === "admin"
-              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-          }`}
-          onClick={() => onNavigate("admin")}
-        >
-          <Shield className="w-4 h-4" />
-          <span className="flex-1 text-left">Gestion</span>
-          {notificationCount > 0 && (
-            <Badge className="bg-destructive text-white text-xs h-5 min-w-5 shrink-0 rounded-full px-1.5 p-0 flex items-center justify-center tabular-nums">
-              {notificationCount}
-            </Badge>
-          )}
-        </button>
+        <div className="relative w-full">
+          <ToastPingLayer className="rounded-md" />
+          <button
+            type="button"
+            className={`relative z-[1] w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+              currentView === "admin"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+            }`}
+            onClick={() => onNavigate("admin")}
+          >
+            <Shield className="w-4 h-4" />
+            <span className="flex-1 text-left">Gestion</span>
+            <NotificationCountPing
+              count={notificationCount}
+              variant="destructive"
+              className="shrink-0"
+              label="Notifications administration"
+            />
+          </button>
+        </div>
 
         <button
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${

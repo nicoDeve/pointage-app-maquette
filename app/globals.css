@@ -115,6 +115,82 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/**
+ * Halo des pastilles notifications : même courbe que le ping Tailwind,
+ * durée fixe pour synchroniser les instances via animation-delay (phase = temps réel % période).
+ */
+@keyframes notification-ping-halo {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.notification-ping-halo {
+  animation: notification-ping-halo 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-ping-halo {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/**
+ * Pastilles non lues : halo fluide (fade + respiration), sans contour — proche de l’esprit shadcn.
+ */
+@keyframes notification-badge-bloom {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.12);
+  }
+}
+
+.notification-badge-bloom {
+  background: color-mix(in oklch, var(--ping-color) 24%, transparent);
+  animation: notification-badge-bloom 3.2s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-badge-bloom {
+    animation: none;
+    opacity: 0.35;
+    transform: scale(1);
+  }
+}
+
+/** Onde unique synchronisée avec les toasts (`ToastPingTarget`) — discret, une fois par événement */
+@keyframes app-toast-ping-burst {
+  0% {
+    box-shadow: 0 0 0 0 var(--app-ping-burst, var(--ring));
+    opacity: 0.85;
+  }
+  100% {
+    box-shadow: 0 0 0 11px transparent;
+    opacity: 0;
+  }
+}
+
+.app-toast-ping-burst {
+  animation: app-toast-ping-burst 0.82s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast-ping-burst {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

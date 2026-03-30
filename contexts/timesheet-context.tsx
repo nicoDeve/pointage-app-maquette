@@ -20,6 +20,8 @@ export interface TimeEntry {
 export interface WeekData {
   id: string
   weekNumber: number
+  /** Année ISO de la semaine (ex. semaine 1 peut être en janvier de l’année N+1). Maquette : 2026. */
+  isoWeekYear?: number
   startDate: string
   endDate: string
   totalHours: number
@@ -54,8 +56,10 @@ interface TimesheetContextType {
   setPointageView: (view: "liste" | "calendrier") => void
   addTimeEntry: (weekId: string, entry: Omit<TimeEntry, "id">) => void
   updateTimeEntry: (weekId: string, entryId: string, hours: number) => void
+  updateTimeEntryProject: (weekId: string, entryId: string, projectId: string) => void
   removeTimeEntry: (weekId: string, entryId: string) => void
   addAbsence: (absence: Omit<Absence, "id">) => void
+  removeAbsence: (id: string) => void
   getTotalHoursThisMonth: () => number
   getCompletedWeeksCount: () => number
   getPendingAbsencesCount: () => number
@@ -76,8 +80,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w33",
     weekNumber: 33,
-    startDate: "11 aoû",
-    endDate: "15 aoû 2026",
+    startDate: "10 août",
+    endDate: "14 août 2026",
     totalHours: 35,
     targetHours: 35,
     status: "complet",
@@ -96,8 +100,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w34",
     weekNumber: 34,
-    startDate: "18 aoû",
-    endDate: "22 aoû 2026",
+    startDate: "17 août",
+    endDate: "21 août 2026",
     totalHours: 35,
     targetHours: 35,
     status: "complet",
@@ -135,8 +139,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w36",
     weekNumber: 36,
-    startDate: "01 sep",
-    endDate: "05 sep 2026",
+    startDate: "31 août",
+    endDate: "4 sept. 2026",
     totalHours: 35,
     targetHours: 35,
     status: "complet",
@@ -156,8 +160,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w37",
     weekNumber: 37,
-    startDate: "08 sep",
-    endDate: "12 sep 2026",
+    startDate: "7 sept.",
+    endDate: "11 sept. 2026",
     totalHours: 35,
     targetHours: 35,
     status: "complet",
@@ -194,8 +198,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w39",
     weekNumber: 39,
-    startDate: "22 sep",
-    endDate: "26 sep 2026",
+    startDate: "21 sept.",
+    endDate: "25 sept. 2026",
     totalHours: 35,
     targetHours: 35,
     status: "complet",
@@ -236,8 +240,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w41",
     weekNumber: 41,
-    startDate: "06 oct",
-    endDate: "10 oct 2026",
+    startDate: "5 oct.",
+    endDate: "9 oct. 2026",
     totalHours: 20,
     targetHours: 35,
     status: "incomplet",
@@ -269,8 +273,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w43",
     weekNumber: 43,
-    startDate: "20 oct",
-    endDate: "24 oct 2026",
+    startDate: "19 oct.",
+    endDate: "23 oct. 2026",
     totalHours: 0,
     targetHours: 35,
     status: "incomplet",
@@ -283,8 +287,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w44",
     weekNumber: 44,
-    startDate: "27 oct",
-    endDate: "31 oct 2026",
+    startDate: "26 oct.",
+    endDate: "30 oct. 2026",
     totalHours: 0,
     targetHours: 35,
     status: "incomplet",
@@ -311,8 +315,8 @@ const initialWeeks: WeekData[] = [
   {
     id: "w46",
     weekNumber: 46,
-    startDate: "10 nov",
-    endDate: "14 nov 2026",
+    startDate: "9 nov.",
+    endDate: "13 nov. 2026",
     totalHours: 0,
     targetHours: 35,
     status: "incomplet",
@@ -412,6 +416,18 @@ export function TimesheetProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const updateTimeEntryProject = (weekId: string, entryId: string, projectId: string) => {
+    setWeeks((prev) =>
+      prev.map((week) => {
+        if (week.id !== weekId) return week
+        const newEntries = week.entries.map((entry) =>
+          entry.id === entryId ? { ...entry, projectId } : entry
+        )
+        return { ...week, entries: newEntries }
+      })
+    )
+  }
+
   const removeTimeEntry = (weekId: string, entryId: string) => {
     setWeeks((prev) =>
       prev.map((week) => {
@@ -434,6 +450,10 @@ export function TimesheetProvider({ children }: { children: ReactNode }) {
   const addAbsence = (absence: Omit<Absence, "id">) => {
     const newAbsence = { ...absence, id: `a${Date.now()}` }
     setAbsences((prev) => [newAbsence, ...prev])
+  }
+
+  const removeAbsence = (id: string) => {
+    setAbsences((prev) => prev.filter((a) => a.id !== id))
   }
 
   const getTotalHoursThisMonth = () => {
@@ -467,8 +487,10 @@ export function TimesheetProvider({ children }: { children: ReactNode }) {
         setPointageView,
         addTimeEntry,
         updateTimeEntry,
+        updateTimeEntryProject,
         removeTimeEntry,
         addAbsence,
+        removeAbsence,
         getTotalHoursThisMonth,
         getCompletedWeeksCount,
         getPendingAbsencesCount,
